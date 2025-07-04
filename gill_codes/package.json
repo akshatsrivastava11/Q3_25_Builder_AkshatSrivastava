@@ -1,0 +1,16 @@
+{
+  "name": "gill_codes",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "esrun": "^3.2.30",
+    "gill": "^0.10.2"
+  }
+}
