@@ -6,7 +6,6 @@ import { createAssociatedTokenAccount, createMint, getAccount, getAssociatedToke
 import { ASSOCIATED_PROGRAM_ID } from "@coral-xyz/anchor/dist/cjs/utils/token";
 
 describe("anchor_escrow", () => {
-  describe("anchor-escrow", () => {
 
     // Configure the client to use the local cluster.
     const provider = anchor.AnchorProvider.env()
@@ -101,7 +100,8 @@ describe("anchor_escrow", () => {
         .rpc();
 
     })
+    
 
 
-  })
-});
+
+  });
