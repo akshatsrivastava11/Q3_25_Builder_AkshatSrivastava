@@ -6,7 +6,7 @@ use crate::{make, Escrow};
 
 
 #[derive(Accounts)]
-#[instruction(seed:u64)]
+
 pub struct Refund<'info>{
       #[account(mut)]
     pub maker:Signer<'info>,
@@ -31,7 +31,7 @@ pub struct Refund<'info>{
     close=maker,
     has_one=mint_a,
     has_one=maker,
-    seeds=[b"escrow",maker.key().as_ref(),seed.to_le_bytes().as_ref()],
+    seeds=[b"escrow",maker.key().as_ref()],
     bump=escrow.bump
    )]
    pub escrow:Account<'info,Escrow>,
@@ -53,7 +53,6 @@ impl<'info>Refund<'info>{
           let signer_seeds: [&[&[u8]]; 1] = [&[
             b"escrow",
             self.maker.to_account_info().key.as_ref(),
-            &self.escrow.seed.to_le_bytes()[..],
             &[self.escrow.bump],
         ]];
         let cpi_program_for_refund=self.token_program.to_account_info();

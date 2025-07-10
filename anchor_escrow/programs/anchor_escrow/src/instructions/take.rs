@@ -46,7 +46,7 @@ pub struct  Take<'info>{
         #[account(
         mut,
         close = maker,
-        seeds = [b"escrow", maker.key().as_ref(), escrow.seed.to_le_bytes().as_ref()],
+        seeds = [b"escrow", maker.key().as_ref()],
         bump = escrow.bump,
     )]
     pub escrow: Account<'info, Escrow>,
@@ -85,7 +85,6 @@ impl<'info>Take<'info>{
              let signer_seeds: [&[&[u8]]; 1] = [&[
             b"escrow",
             self.maker.to_account_info().key.as_ref(),
-            &self.escrow.seed.to_le_bytes()[..],
             &[self.escrow.bump],
         ]];
                     let cpi_program: AccountInfo<'_>=self.token_program.to_account_info();

@@ -3,6 +3,7 @@ import { Program } from "@coral-xyz/anchor";
 import { AnchorEscrow } from "../target/types/anchor_escrow";
 import { LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 import { createAssociatedTokenAccount, createMint, getAccount, getAssociatedTokenAddress, mintTo, TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { ASSOCIATED_PROGRAM_ID } from "@coral-xyz/anchor/dist/cjs/utils/token";
 
 describe("anchor_escrow", () => {
   describe("anchor-escrow", () => {
@@ -66,7 +67,6 @@ describe("anchor_escrow", () => {
         [
           Buffer.from("escrow"),
           maker.publicKey.toBuffer(),
-          seedBuffer
         ],
         program.programId
       );
@@ -85,7 +85,7 @@ describe("anchor_escrow", () => {
 
     it("Make", async () => {
       const initialMakerAtaBalance = (await getAccount(provider.connection, maker_ata_a, "confirmed")).amount
-      await program.methods.make(depositAmount, reciveamount, seed)
+      await program.methods.make(depositAmount, reciveamount)
         .accounts({
           maker: maker.publicKey,
           mintA: mintA,
@@ -95,12 +95,13 @@ describe("anchor_escrow", () => {
           vault: vault,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
+          associatedTokenProgram: ASSOCIATED_PROGRAM_ID,
         })
         .signers([maker])
         .rpc();
 
     })
+
 
   })
 });
