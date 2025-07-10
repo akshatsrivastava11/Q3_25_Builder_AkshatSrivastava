@@ -1,9 +1,9 @@
-use std::cell::Ref;
-
 use anchor_lang::{prelude::*, system_program::{transfer, Transfer}};
-use anchor_spl::{associated_token::AssociatedToken, token::{close_account, transfer_checked, CloseAccount, Mint, Token, TokenAccount, TransferChecked}, token_interface::TokenInterface};
+use anchor_spl::{associated_token::AssociatedToken, token::{close_account, transfer_checked, CloseAccount, Token, TransferChecked}, token_interface::{Mint, TokenAccount, TokenInterface}};
+// use anchor_spl::token_interface::Min;
 
 use crate::{make, Escrow};
+
 
 #[derive(Accounts)]
 pub struct  Take<'info>{
@@ -67,7 +67,7 @@ pub struct  Take<'info>{
 impl<'info>Take<'info>{
     pub fn take(&mut self)->Result<()>{
         //transfer mint_b from taker's mint_b_ata to maker_mint_b_ata
-            let cpi_program=self.token_program.to_account_info();
+            let cpi_program: AccountInfo<'_>=self.token_program.to_account_info();
         let cpi_Accounts=TransferChecked{from:self.taker_mint_b_ata.to_account_info(),to:self.maker_taker_mint_b.to_account_info(),
         authority:self.taker.to_account_info(),
         mint:self.mint_b.to_account_info()
@@ -82,11 +82,14 @@ impl<'info>Take<'info>{
             authority:self.escrow.to_account_info(),
             mint:self.mint_a.to_account_info()
         };
-        let signerSeeds=[&[
-            b"escrow",self.maker.to_account_info().key.as_ref(),
+             let signer_seeds: [&[&[u8]]; 1] = [&[
+            b"escrow",
+            self.maker.to_account_info().key.as_ref(),
             &self.escrow.seed.to_le_bytes()[..],
-            &[self.escrow.bump] 
+            &[self.escrow.bump],
         ]];
+                    let cpi_program: AccountInfo<'_>=self.token_program.to_account_info();
+
         let ctx=CpiContext::new_with_signer(cpi_program, transferAccounts, &signer_seeds);
         transfer_checked(ctx, self.vault.amount, self.mint_a.decimals);
         let closeAccount=CloseAccount{
@@ -94,7 +97,7 @@ impl<'info>Take<'info>{
             destination:self.maker.to_account_info(),
             authority:self.escrow.to_account_info()
         };
-        let closeCtx=CpiContext::new_with_signer(self.token_program.to_account_info(),closeAccount,signerSeeds);
+        let closeCtx=CpiContext::new_with_signer(self.token_program.to_account_info(),closeAccount,&signer_seeds);
         close_account(closeCtx)
     }
 }

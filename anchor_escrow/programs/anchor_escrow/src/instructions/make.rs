@@ -1,5 +1,6 @@
 use anchor_lang::{prelude::*, system_program::{transfer, Transfer}};
-use anchor_spl::{associated_token::AssociatedToken, token::{transfer_checked, Mint, Token, TokenAccount, TransferChecked}, token_interface::TokenInterface};
+use anchor_spl::{associated_token::AssociatedToken, token::{transfer_checked, Token, TransferChecked}, token_interface::TokenInterface,token_interface::Mint,token_interface::TokenAccount};
+// use anchor_spl::token_interface::Min;
 
 use crate::{make, Escrow};
 
@@ -67,7 +68,7 @@ impl<'info>Make<'info>{
     }
     pub fn make_offer(&mut self,amount:u64)->Result<()>{
         let cpi_program=self.token_program.to_account_info();
-        let cpi_Accounts=TransferChecked{from:self.maker.to_account_info(),to:self.vault.to_account_info(),
+        let cpi_Accounts=TransferChecked{from:self.maker_ata_mint_a.to_account_info(),to:self.vault.to_account_info(),
         authority:self.maker.to_account_info(),
         mint:self.mint_a.to_account_info()
         };

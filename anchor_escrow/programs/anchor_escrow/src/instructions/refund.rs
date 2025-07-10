@@ -1,9 +1,9 @@
-use std::cell::Ref;
-
 use anchor_lang::{prelude::*, system_program::{transfer, Transfer}};
-use anchor_spl::{associated_token::AssociatedToken, token::{close_account, transfer_checked, CloseAccount, Mint, Token, TokenAccount, TransferChecked}, token_interface::TokenInterface};
+use anchor_spl::{associated_token::AssociatedToken, token::{close_account, transfer_checked, CloseAccount, Token, TransferChecked}, token_interface::{Mint, TokenAccount, TokenInterface}};
+// use anchor_spl::token_interface::Min;
 
 use crate::{make, Escrow};
+
 
 #[derive(Accounts)]
 #[instruction(seed:u64)]
@@ -60,13 +60,14 @@ impl<'info>Refund<'info>{
         let cpi_accounts=TransferChecked{authority:self.escrow.to_account_info(),from:self.vault.to_account_info(),mint:self.mint_a.to_account_info(),to:self.maker_ata_mint_a.to_account_info()};
         let cpi_context_refund=CpiContext::new_with_signer(cpi_program_for_refund, cpi_accounts,&signer_seeds);
         transfer_checked(cpi_context_refund, self.vault.amount,self.mint_a.decimals);
+        let cpi_program_for_refund=self.token_program.to_account_info();
 
         let close_Account=CloseAccount{
             authority:self.escrow.to_account_info(),
             account:self.vault.to_account_info(),
             destination:self.maker_ata_mint_a.to_account_info()
             };
-            let close_cpi_context=CpiContext::new_with_signer(program, accounts, &signer_seeds)
+            let close_cpi_context=CpiContext::new_with_signer(cpi_program_for_refund, close_Account, &signer_seeds);
             close_account(close_cpi_context)
 
     }
