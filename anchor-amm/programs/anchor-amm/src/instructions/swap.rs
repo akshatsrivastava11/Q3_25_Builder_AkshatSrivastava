@@ -1,65 +1,132 @@
-use anchor_lang::prelude::*;
-use anchor_spl::{
-    associated_token::AssociatedToken,
-    token::{transfer, Transfer, Token, TokenAccount, Mint},
-};
-use constant_product_curve::ConstantProduct;           // or your own math lib
-
-use crate::state::Config;
+use anchor_lang::{prelude::*, system_program::{transfer, Transfer}};
+use anchor_spl::{associated_token::AssociatedToken, token::{mint_to, MintTo, TransferChecked}, token_interface::{Mint, TokenAccount, TokenInterface}};
+use constant_product_curve::ConstantProduct;
+use crate::Config;
 
 
 #[derive(Accounts)]
 pub struct Swap<'info>{
-    #[account(mut)]
-    pub user:Signer<'info>,
+       #[account(mut)]
+    pub depositer:Signer<'info>,
+    
+    //mints
     #[account(
-              seeds  = [b"config", config.seed.to_le_bytes().as_ref()],
-        bump   = config.bump_config,
-        has_one = mint_x,
-        has_one = mint_y
+        mint::token_program=token_program
+    )]
+    pub mint_x:InterfaceAccount<'info,Mint>,
+    #[account(
+        mint::token_program=token_program
+    )]
+    pub mint_y:InterfaceAccount<'info,Mint>,
+
+    //state
+  
+    #[account(
+    
+        seeds=[b"config",config.seed.to_le_bytes().as_ref(),depositer.key().as_ref()],
+        bump
     )]
     pub config:Account<'info,Config>,
-    pub mint_x: Account<'info, Mint>,
-    pub mint_y: Account<'info, Mint>,
-
-        #[account(
-        mut,
-        associated_token::mint = mint_x,
-        associated_token::authority = config,
+    #[account(
+ 
+        mint::authority=config,
+        mint::decimals=6,
+        seeds=[b"lp",config.key().as_ref()],
+        bump
+    )]    
+    pub mint_lp:InterfaceAccount<'info,Mint>,
+    #[account(
+    
+        associated_token::mint=mint_lp,
+        associated_token::authority=mint_lp,
+        
     )]
-    pub vault_x: Account<'info, TokenAccount>,
+    pub depositer_lp:InterfaceAccount<'info,TokenAccount>,
+    #[account(
+        associated_token::mint=mint_x,
+        associated_token::authority=config,
+    )]
+    pub vault_x:InterfaceAccount<'info,TokenAccount>,
+    #[account(
+        associated_token::mint=mint_x,
+        associated_token::authority=config,
+    )]
+    pub vault_y:InterfaceAccount<'info,TokenAccount>,
 
     #[account(
-        mut,
-        associated_token::mint = mint_y,
-        associated_token::authority = config,
+        associated_token::mint=mint_x,
+        associated_token::authority=depositer,
     )]
-    pub vault_y: Account<'info, TokenAccount>,
-
-
+    pub user_x:InterfaceAccount<'info,TokenAccount>,
     #[account(
-        mut,
-        associated_token::mint = mint_x,
-        associated_token::authority = user,
+        associated_token::mint=mint_x,
+        associated_token::authority=depositer,
     )]
-    pub user_x: Account<'info, TokenAccount>,
+    pub user_y:InterfaceAccount<'info,TokenAccount>,
+    
+    pub system_program:Program<'info,System>,
+    pub token_program:Interface<'info,TokenInterface>,
+    pub associated_token_program:Program<'info,AssociatedToken>
 
-    #[account(
-        mut,
-        associated_token::mint = mint_y,
-        associated_token::authority = user,
-    )]
-    pub user_y: Account<'info, TokenAccount>,
-
-    pub token_program: Program<'info, Token>,
-    pub associated_token_program: Program<'info, AssociatedToken>,
-    pub system_program: Program<'info, System>,
 }
 
-/*----------------------------------------------------- */
-/*                   Logic                              */
-/*----------------------------------------------------- */
+impl<'info>Swap<'info>{
+    pub fn swap(&mut self,amount_in:u64,min_out:u64,is_x_in:bool)->Result<()>{
+        let x_reserve=self.vault_x.amount;
+        let y_reserve=self.vault_y.amount;
+      let constantProducts=ConstantProduct::init(
+        x_reserve,
+         y_reserve,
+          self.mint_lp.supply,
+        self.config.fees,
+            Some(6));
+            let amt_out=if is_x_in{
+                // let new_x=x_reserve.checked_add(amount_in);
+                let new_y=ConstantProduct::y2_from_x_swap_amount(x_reserve, y_reserve, amount_in).unwrap();
+                y_reserve.checked_sub(new_y).unwrap()
+            }else{
+                let new_x=ConstantProduct::x2_from_y_swap_amount(x_reserve, y_reserve, amount_in).unwrap();
+                x_reserve.checked_sub(new_x).unwrap()
+            };
+            self.transfer_in(is_x_in, amount_in);
+            self.transfer_out(is_x_in, amt_out)
 
-// impl<'info> Swap<'info>{
-//     pub 
-// }
+}
+    //deposit your token either x or y in the vault_x,vault_y
+    pub fn transfer_in(&mut self,is_x:bool,amount:u64)->Result<()>{
+      let (from,to)=match is_x{
+            true=>(self.user_x.to_account_info(),self.vault_x.to_account_info()),
+            false=>(self.user_y.to_account_info(),self.vault_y.to_account_info())
+        };
+        let program=self.token_program.to_account_info();
+        let accounts=Transfer{
+            from,
+            to
+        };
+        let ctx=CpiContext::new(program, accounts);
+        transfer(ctx, amount)
+    }
+    //withdraw the other token with proper lineage
+    pub fn transfer_out(&mut self,is_x:bool,amount:u64)->Result<()>{
+            let (to,from)=match is_x{
+            true=>(self.user_x.to_account_info(),self.vault_x.to_account_info()),
+            false=>(self.user_y.to_account_info(),self.vault_y.to_account_info())
+        };
+        let program=self.token_program.to_account_info();
+        let accounts=Transfer{
+            from,
+            to
+        };
+        let key=self.depositer.key();
+        let signer=&[
+            &b"config"[..],
+            &self.config.seed.to_le_bytes(),
+            key.as_ref(),
+            &[self.config.bump]
+        ];
+        let signer_seeds=&[&signer[..]];
+        let ctx=CpiContext::new_with_signer(program, accounts, signer_seeds);
+        transfer(ctx, amount)   
+    }
+
+}
