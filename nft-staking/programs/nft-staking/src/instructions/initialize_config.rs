@@ -1,4 +1,4 @@
-use anchor_lang::prelude::*;
+use anchor_lang::{prelude::*, solana_program::stake::state::Stake};
 
 use crate::StakeConfig;
 
@@ -18,6 +18,8 @@ pub struct InitilizeConfig<'info>{
     #[account(
         init,
         payer=signer,
+        seeds=[b"rewards",config.key().as_ref()],
+        bump,
         mint::decimals=6,
         mint::authority=config
     )]
@@ -26,8 +28,14 @@ pub struct InitilizeConfig<'info>{
 }
 
 impl<'info> InitilizeConfig<'info> {
-    pub fn initialize_config(&mut self)->Result<()>{
-        
-        todo!()
+    pub fn initialize_config(&mut self,points_per_stake:u8,max_stake:u8,freeze_period:u32,bumps:InitilizeConfigBumps)->Result<()>{
+        self.config.set_inner(StakeConfig {
+             points_per_stake,
+              max_stake, 
+              freeze_period,
+               bump: bumps.config,
+                reward_bump: bumps.reward_mint
+             });
+        Ok(())
     }
 }
