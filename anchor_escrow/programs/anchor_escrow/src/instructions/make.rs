@@ -4,7 +4,7 @@ use anchor_spl::{associated_token::AssociatedToken, token::{transfer_checked, Tr
 use crate::Escrow;
 
 #[derive(Accounts)]
-#[instruction(seed:u64)]
+#[instruction(seed:u64,amount_to_be_recieved:u64,amount_to_be_deposited:u64)]
 pub struct Make<'info>{
     #[account(mut)]
     pub maker:Signer<'info>,
@@ -57,13 +57,14 @@ pub struct Make<'info>{
 impl<'info>Make<'info>{
     //this amount is amount to token_y we need to recieve
     pub fn initilize(&mut self,amount_to_be_recieved:u64,seed:u64,bumps:MakeBumps)->Result<()>{
+        msg!("seed is {}",seed);
         self.escrow.set_inner(Escrow {
              maker: self.maker.key(), 
             mint_x: self.mint_x.key(),
              mint_y: self.mint_y.key(),
               amonunt: amount_to_be_recieved,
                escrow_bump:bumps.escrow,
-                 seed,
+                 seed:seed,
                  });
         Ok(())
 
