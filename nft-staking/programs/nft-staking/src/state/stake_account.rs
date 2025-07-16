@@ -1,5 +1,7 @@
 use anchor_lang::prelude::*;
 
+#[account]
+#[derive(InitSpace)]
 pub struct StakeAccount{
     pub mint:Pubkey,
     pub owner:Pubkey,
