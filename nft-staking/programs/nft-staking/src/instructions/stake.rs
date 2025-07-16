@@ -91,7 +91,11 @@ impl<'info>Stake<'info>{
          staked_at: Clock::get()?.unix_timestamp,
           bump: bumps.stake_account
          });
+         self.user_config.points+=self.config.points_per_stake as u32;
+    self.user_config.amount_staked+=1;
+    
          Ok(())
+    
     //  let ctx=CpiContext::new(program, accounts);
     //  freeze_delegated_account(ctx)
 
