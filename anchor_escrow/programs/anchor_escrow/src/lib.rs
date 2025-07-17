@@ -14,7 +14,9 @@ declare_id!("3jjViV2cphNabK7gbWZcSic4R2LihFJ8G8qH535Zc28U");
 #[program]
 pub mod anchor_escrow {
     use super::*;
-    pub fn make(ctx:Context<Make>,amount_to_be_recieved:u64,amount_to_be_deposited:u64,seed:u64)->Result<()>{
+    pub fn make(ctx:Context<Make>,seed:u64,amount_to_be_recieved:u64,amount_to_be_deposited:u64)->Result<()>{
+        msg!("SEed is {}",seed);
+        
         ctx.accounts.initilize(amount_to_be_recieved,seed,ctx.bumps);
         ctx.accounts.make(amount_to_be_deposited)
     }

@@ -21,8 +21,8 @@ describe("anchor-escrow",()=>{
   let makerY:PublicKey
   let takerX:PublicKey
   let takerY:PublicKey
-  let escrow:PublicKey
-  let escrowBump:number
+  let escrowPda:PublicKey
+  let bump:number
   let vaultX:PublicKey
   const amountToBeRecieved=1e6;
   const amountToBeDeposited=1e6;
@@ -42,21 +42,21 @@ describe("anchor-escrow",()=>{
     mintY=await createMint(provider.connection,taker,taker.publicKey,null,6)
 
     //creating the escrow 
-    let [escrowPda,bump]=PublicKey.findProgramAddressSync(
+     escrowPda=PublicKey.findProgramAddressSync(
      [ Buffer.from("escrow"),
       new BN(1).toArrayLike(Buffer,"le",8),
       maker.publicKey.toBuffer()
     ],
     program.programId
-  );
-  escrow=escrowPda
-  escrowBump=bump
+  )[0];
+  // escrow=escrowPda
+  // escrowBump=bump
 
   //creating the ata
   makerX=(await getOrCreateAssociatedTokenAccount(provider.connection,maker,mintX,maker.publicKey)).address;
   takerY=(await getOrCreateAssociatedTokenAccount(provider.connection,taker,mintY,taker.publicKey)).address;
   //ata for vault_x     TypeError: src.toArrayLike is not a function
-  vaultX=(await getOrCreateAssociatedTokenAccount(provider.connection,maker,mintX,escrow,true)).address
+  vaultX=getAssociatedTokenAddressSync(mintX,escrowPda,true)
 
   //minto makerX and takerY 
   await mintTo(provider.connection,maker,mintX,makerX,maker,2e6);
@@ -70,7 +70,21 @@ describe("anchor-escrow",()=>{
       maker:maker.publicKey,
       mintX,
       mintY,
-      escrow:escrow,
+      escrow:escrowPda,
+      vaultX,
+      makerY,
+      makerX,
+      systemProgram:SystemProgram.programId,
+      tokenProgram:TOKEN_PROGRAM_ID,
+      associatedTokenProgram:ASSOCIATED_PROGRAM_ID
+    }).signers([maker]).rpc()
+  })
+  it("refund",async()=>{
+    await program.methods.refund().accounts({
+           maker:maker.publicKey,
+      mintX,
+      mintY,
+      escrow:escrowPda,
       vaultX,
       makerY,
       makerX,
