@@ -18,7 +18,7 @@ pub struct InitializeMarketplace<'info>{
         init,
         payer=admin,
         space=8+Marketplace::INIT_SPACE,
-        seeds=[b"marketplace",name.as_bytes(),admin.key.as_ref()],
+        seeds=[b"marketplace",name.as_bytes()],
         bump
     )]
     pub marketplace:Account<'info,Marketplace>,

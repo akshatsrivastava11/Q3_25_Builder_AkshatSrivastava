@@ -9,7 +9,7 @@ pub struct Delist<'info>{
     #[account(mut)]
     pub maker:Signer<'info>,
     #[account(
-        seeds=[b"marketplace",name.as_bytes(),admin.key.as_ref()],
+        seeds=[b"marketplace",name.as_bytes()],
         bump        
     )]
     pub marketplace:Account<'info,Marketplace>,
