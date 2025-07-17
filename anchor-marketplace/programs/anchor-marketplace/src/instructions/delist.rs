@@ -1,5 +1,5 @@
 use anchor_lang::{prelude::*, solana_program::system_instruction::SystemError};
-use anchor_spl::{associated_token::AssociatedToken, token::{transfer_checked, TransferChecked}, token_interface::{Mint,TokenAccount, TokenInterface}};
+use anchor_spl::{associated_token::AssociatedToken, token::{close_account, transfer_checked, CloseAccount, TransferChecked}, token_interface::{Mint,TokenAccount, TokenInterface}};
 
 use crate::{Listing, Marketplace};
 
@@ -39,4 +39,48 @@ pub struct Delist<'info>{
 //transering the tokens back to the user 
 //closing the vault
 impl <'info>Delist<'info> {
-    pub 
+    pub fn delist(&mut self)->Result<()>{
+        self.transfer();
+        self.close_vault()
+// todo!()
+    } 
+    pub fn transfer(&mut self)->Result<()>{
+        let key=self.marketplace.key();
+        let seeds=&[
+            b"listing",
+            key.as_ref(),
+            &[self.listing.bump]
+        ];
+        let signer_seeeds=&[&seeds[..]];
+        let accounts=TransferChecked{
+            from:self.vault_ata.to_account_info(),
+            authority:self.listing.to_account_info(),
+            mint:self.mint.to_account_info(),
+            to:self.user_mint_ata.to_account_info()
+        };
+    
+        let program=self.token_program.to_account_info();
+        let ctx=CpiContext::new_with_signer(program, accounts, signer_seeds);
+        transfer_checked(ctx, 1, 0)
+        // todo!()
+    
+    }
+    pub fn close_vault(&mut self)->Result<()>{
+        let program=self.token_program.to_account_info();
+        let seeds=&[
+            b"listing",
+            key.as_ref(),
+            &[self.listing.bump]
+        ];
+        let signer_seeeds=&[&seeds[..]];
+        let accounts=CloseAccount{
+            account:self.vault_ata.to_account_info(),
+            authority:self.listing.to_account_info(),
+            destination:self.maker.to_account_info()
+        };
+        let ctx=CpiContext::new_with_signer(program, accounts, signer_seeds);
+        close_account(ctx)
+        // todo!()
+    }
+
+}
