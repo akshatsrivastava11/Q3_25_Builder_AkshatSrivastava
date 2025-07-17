@@ -2,18 +2,18 @@
 use std::time;
 
 use anchor_lang::prelude::*;
-use anchor_spl::{metadata::{freeze_delegated_account, mpl_token_metadata::instructions::{FreezeDelegatedAccountCpi, FreezeDelegatedAccountCpiAccounts}, FreezeDelegatedAccount, MasterEditionAccount, Metadata, MetadataAccount}, token::{approve, thaw_account, Approve, ThawAccount, TokenAccount}};
+use anchor_spl::{metadata::{freeze_delegated_account, mpl_token_metadata::instructions::{FreezeDelegatedAccountCpi, FreezeDelegatedAccountCpiAccounts}, FreezeDelegatedAccount, MasterEditionAccount, Metadata, MetadataAccount}, token::{approve, revoke, thaw_account, Approve, Revoke, ThawAccount, TokenAccount}};
 
 use crate::StakeAccount;
 use crate::StakeConfig;
 use crate::UserConfig;
-use crate::error::StakeError
+use crate::error::StakeError;
 #[derive(Accounts)]
 pub struct Unstake<'info>{
        #[account(mut)]
     pub user:Signer<'info>,
     pub mint:Account<'info,Mint>,
-    #[account(
+    #[account(       
         mut,
         associated_token::authority=user,
         associated_token::mint=mint,
@@ -47,6 +47,7 @@ pub struct Unstake<'info>{
 }
 impl<'info>Unstake<'info>{
     pub fn unstake(&mut self)->Result<()>{
+        //unfreezing the account done!!!!
         let time_elapsed=Clock::get()?.unix_timestamp-self.stake_account.staked_at;
         require!(time_elapsed<(self.config.freeze_period as i64),StakeError::TimeElapsedError);
         require!(self.user_config.amount_staked>0,StakeError::NoNFTStakedError);
@@ -67,7 +68,14 @@ impl<'info>Unstake<'info>{
      };
      let ctx=CpiContext::new(self.token_program.to_account_info(), accounts);
      thaw_account(ctx);
-     
+     //revoking
+     let accounts=Revoke{
+        authority:self.user.to_account_info(),
+        source:self.mint.to_account_info()
+     };
+     let ctx=CpiContext::new(program, accounts);
+     revoke(ctx);
+     self.user_config.amount_staked-=1;
      Ok(())
     }
 }
