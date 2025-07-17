@@ -7,3 +7,6 @@
 [submodule "mintCraft-nft_program"]
 	path = mintCraft-nft_program
 	url = https://github.com/akshatsrivastava11/mintCraft-nft_program.git
+[submodule "mintCraft-frontend"]
+	path = mintCraft-frontend
+	url = https://github.com/akshatsrivastava11/mintCraft-frontend.git
