@@ -1,5 +1,5 @@
 use anchor_lang::{prelude::*};
-use anchor_spl::{metadata::{mpl_token_metadata::instructions::{FreezeDelegatedAccount, FreezeDelegatedAccountCpi, FreezeDelegatedAccountCpiAccounts}, MasterEditionAccount, Metadata, MetadataAccount}, token::{approve, Approve, FreezeAccount} };
+use anchor_spl::{metadata::{mpl_token_metadata::instructions::{FreezeDelegatedAccount, FreezeDelegatedAccountCpi, FreezeDelegatedAccountCpiAccounts}, MasterEditionAccount, Metadata, MetadataAccount}, token::{approve, Approve, FreezeAccount, Mint, Token, TokenAccount} };
 
 use crate::{StakeAccount, StakeConfig, UserConfig};
 
@@ -18,8 +18,8 @@ pub struct Stake<'info>{
         seeds=[b"metadata",metadata_program.key().as_ref(),mint.key().as_ref()],
         bump,
         seeds::program=metadata_program,
-        constraint=metadata.collection.unwrap().key.as_ref()==collection.key().as_ref(),
-        constraint=metadata.collection.unwrap().verified==true
+        constraint=metadata.collection.clone().unwrap().key.as_ref()==collection.key().as_ref(),
+        constraint=metadata.collection.clone().unwrap().verified==true
     )]
     pub metadata:Account<'info,MetadataAccount>,
     #[account(
@@ -48,7 +48,7 @@ pub struct Stake<'info>{
     )]
     pub stake_account:Account<'info,StakeAccount>,
     pub system_program:Program<'info,System>,
-    pub token_program:Program<'info,TokenAccount>,
+    pub token_program:Program<'info,Token>,
     pub metadata_program:Program<'info,Metadata>
     
 
@@ -76,11 +76,12 @@ impl<'info>Stake<'info>{
             token_account:&self.user_mint_ata.to_account_info(),
             token_program:&self.token_program.to_account_info()
         };
+        let binding = self.user_config.key();
         let seeds=&[
-            b"stake",self.user_config.key().as_ref(),
+            b"stake",binding.as_ref(),
             &[bumps.stake_account]
         ];
-        let signer_seeds=&[&seeds[..]];
+        let signers_seeds=&[&seeds[..]];
         FreezeDelegatedAccountCpi::new(&self.metadata_program.to_account_info(),account).invoke_signed(signers_seeds);
         
         Ok(())
@@ -91,7 +92,7 @@ impl<'info>Stake<'info>{
             delegate:self.stake_account.to_account_info(),
             to:self.user_mint_ata.to_account_info()
         };
-        let ctx=CpiContext::new(self.token_program.to_account_info(), accounts);
+        let ctx=CpiContext::new(self.token_program.to_account_info(), account);
         approve(ctx, 1)
     }
     pub fn initialize_stake_Account(&mut self,bumps:&StakeBumps)->Result<()>{

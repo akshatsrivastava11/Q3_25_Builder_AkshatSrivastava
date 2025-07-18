@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::{metadata::{mpl_token_metadata::instructions::{FreezeDelegatedAccount, FreezeDelegatedAccountCpi, FreezeDelegatedAccountCpiAccounts, ThawDelegatedAccountCpi, ThawDelegatedAccountCpiAccounts}, MasterEditionAccount, Metadata, MetadataAccount, SetAndVerifyCollection}, token::{approve, Approve, FreezeAccount, Revoke,revoke} };
+use anchor_spl::{metadata::{mpl_token_metadata::instructions::{FreezeDelegatedAccount, FreezeDelegatedAccountCpi, FreezeDelegatedAccountCpiAccounts, ThawDelegatedAccountCpi, ThawDelegatedAccountCpiAccounts}, MasterEditionAccount, Metadata, MetadataAccount, SetAndVerifyCollection}, token::{approve, revoke, Approve, FreezeAccount, Mint, Revoke, Token, TokenAccount} };
 
 use crate::{StakeAccount, StakeConfig, UserConfig};
 use crate::error::StakeError;
@@ -36,7 +36,7 @@ pub struct Unstake<'info>{
     )]
     pub stake_account:Account<'info,StakeAccount>,
     pub system_program:Program<'info,System>,
-    pub token_program:Program<'info,TokenAccount>,
+    pub token_program:Program<'info,Token>,
     pub metadata_program:Program<'info,Metadata>
 }   
 
@@ -49,17 +49,18 @@ impl<'info>Unstake<'info>{
         require!(time_elapsed>self.stake_config.freeze_period as i64,StakeError::TimeElapsedError);
         require!(self.user_config.amounts_staked>0,StakeError::NoNFTStakedError);
         let program=self.metadata_program.to_account_info();
+        let binding = self.user_config.key();
         let seeds=&[
-            b"stake",self.user_config.key().as_ref(),
+            b"stake",binding.as_ref(),
             &[bumps.stake_account]
         ];
-        let signer_seeds=&[&seeds[..]];
+        let signers_seeds=&[&seeds[..]];
         let accounts=ThawDelegatedAccountCpiAccounts{
             delegate:&self.stake_account.to_account_info(),
             edition:&self.master_edition.to_account_info(),
-            mint:self.mint.to_account_info(),
-            token_account:self.user_mint_ata.to_account_info(),
-            token_program:self.token_program.to_account_info()
+            mint:&self.mint.to_account_info(),
+            token_account:&self.user_mint_ata.to_account_info(),
+            token_program:&self.token_program.to_account_info()
         };
         ThawDelegatedAccountCpi::new(&self.metadata_program.to_account_info(), accounts).invoke_signed(signers_seeds);
         let account=Revoke{

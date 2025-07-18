@@ -1,4 +1,5 @@
 use anchor_lang::{prelude::*, solana_program::stake::state::Stake};
+use anchor_spl::token::{Mint, Token};
 
 use crate::StakeConfig;
 
@@ -24,7 +25,8 @@ pub struct InitializeConfig<'info>{
         
     )]
     pub rewards_mint:Account<'info,Mint>,
-    pub system_program:Program<'info,System>
+    pub system_program:Program<'info,System>,
+    pub token_program:Program<'info,Token>
 }
 
 impl<'info>InitializeConfig<'info>{
