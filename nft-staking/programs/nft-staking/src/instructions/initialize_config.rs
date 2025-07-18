@@ -1,41 +1,42 @@
-use anchor_lang::prelude::*;
+use anchor_lang::{prelude::*, solana_program::stake::state::Stake};
 
 use crate::StakeConfig;
 
 #[derive(Accounts)]
 pub struct InitializeConfig<'info>{
     #[account(mut)]
-    pub user:Signer<'info>,
+    pub admin:Signer<'info>,
     #[account(
         init,
-        payer=user,
+        payer=admin,
         space=8+StakeConfig::INIT_SPACE,
-        seeds=[b"config".as_ref()],
+        seeds=[b"config"],
         bump
     )]
-    pub config:Account<'info,StakeConfig>,
+    pub stake_config:Account<'info,StakeConfig>,
     #[account(
         init,
-        payer=user,
+        payer=admin,
+        seeds=[b"rewards",stake_config.key().as_ref()],
+        bump,
+        mint::authority=stake_config,
         mint::decimals=6,
-        mint::authority=config,
-        seeds=[b"reward".as_ref(),config.key().as_ref()],
-        bump
+        
     )]
-    pub reward:Account<'info,Mint>,
+    pub rewards_mint:Account<'info,Mint>,
     pub system_program:Program<'info,System>
-
 }
 
 impl<'info>InitializeConfig<'info>{
-    pub fn initialize_config(&mut self,points_per_stake:u8,max_stake:u8,freeze_period:u32,bumps:InitializeConfigBumps)->Result<()>{
-        self.config.set_inner(StakeConfig { 
-            points_per_stake,
-             max_stake, 
-             freeze_period,
-              config_bump:bumps.config,
-               rewards_bump: bumps.reward
-             });
-             Ok(())
+    pub fn initialize_config(&mut self,points_per_stake:u64,max_amount_staked:u8,fees:u8,freeze_period:u32,bumps:InitializeConfigBumps)->Result<()>{
+        self.stake_config.set_inner(StakeConfig {
+             points_per_stake,
+              max_amount_staked,
+               fees,
+                rewards_bump:bumps.rewards_mint,
+                 stake_config_bump: bumps.stake_config,
+                  freeze_period
+                 });
+                 Ok(())
     }
 }
