@@ -13,3 +13,6 @@
 [submodule "mintCraft-model-registry"]
 	path = mintCraft-model-registry
 	url = https://github.com/akshatsrivastava11/mintCraft-model-registry.git
+[submodule "mintCraft-marketplace"]
+	path = mintCraft-marketplace
+	url = https://github.com/akshatsrivastava11/mintCraft-marketplace.git
