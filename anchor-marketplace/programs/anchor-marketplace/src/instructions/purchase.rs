@@ -1,5 +1,5 @@
 use anchor_lang::{prelude::*, system_program::{Transfer,transfer}};
-use anchor_spl::{associated_token::AssociatedToken, token::{ mint_to, transfer_checked, MintTo, Token, TokenAccount, TransferChecked}, token_2022::spl_token_2022::extension::metadata_pointer::processor, token_interface::{Mint, TokenInterface}};
+use anchor_spl::{associated_token::AssociatedToken, token::{ close_account, mint_to, transfer_checked, CloseAccount, MintTo, Token, TransferChecked}, token_2022::spl_token_2022::extension::metadata_pointer::processor, token_interface::{Mint, TokenInterface,TokenAccount}};
 
 use crate::{marketplace, Listing, Marketplace};
 
@@ -28,7 +28,7 @@ pub struct Purchase<'info>{
     )]
     pub  vault:InterfaceAccount<'info,TokenAccount>,
     #[account(
-        seeds=[b"marketplace",name.as_bytes()],
+        seeds=[b"marketplace",marketplace.name.as_bytes()],
         bump
     )]    
     pub marketplace:Account<'info,Marketplace>,
@@ -101,13 +101,14 @@ impl <'info>Purchase<'info> {
             authority:self.listing.to_account_info(),
             mint:self.mint.to_account_info()
         };
+        let key=self.marketplace.key();
         let seeds=&[
             b"listing",
             key.as_ref(),
             &[self.listing.bump]
         ];
         let signer_seeeds=&[&seeds[..]];
-        let ctx=CpiContext::new_with_signer(program, accounts, signer_seeds);
+        let ctx=CpiContext::new_with_signer(program, accounts, signer_seeeds);
         transfer_checked(ctx, 1, 0)
     }
     //reward the taker
@@ -131,6 +132,7 @@ impl <'info>Purchase<'info> {
     //close the vault
     pub fn close(&mut self)->Result<()>{
            let program=self.token_program.to_account_info();
+           let key=self.marketplace.key();
         let seeds=&[
             b"listing",
             key.as_ref(),
@@ -142,7 +144,7 @@ impl <'info>Purchase<'info> {
             authority:self.listing.to_account_info(),
             destination:self.maker.to_account_info()
         };
-        let ctx=CpiContext::new_with_signer(program, accounts, signer_seeds);
+        let ctx=CpiContext::new_with_signer(program, accounts, signer_seeeds);
         close_account(ctx)
         // todo!()
     }

@@ -30,6 +30,7 @@ pub struct Stake<'info>{
     pub master_edition:Account<'info,MasterEditionAccount>,
     pub collection:Account<'info,Mint>,
     #[account(
+        mut,
         seeds=[b"user",stake_config.key().as_ref(),user.key().as_ref()],
         bump=user_config.bump,
     )]
@@ -63,8 +64,7 @@ impl<'info>Stake<'info>{
         self.initialize_stake_Account(&bumps);
         self.approve();
         self.freeze(&bumps);
-        self.user_config.points+=self.stake_config.points_per_stake as u64;
-        self.user_config.amounts_staked+=1;
+
         Ok(())
     }
     pub fn freeze(&mut self,bumps:&StakeBumps)->Result<()>{
@@ -82,7 +82,7 @@ impl<'info>Stake<'info>{
             &[bumps.stake_account]
         ];
         let signers_seeds=&[&seeds[..]];
-        FreezeDelegatedAccountCpi::new(&self.metadata_program.to_account_info(),account).invoke_signed(signers_seeds);
+        FreezeDelegatedAccountCpi::new(&self.metadata_program.to_account_info(),account).invoke_signed(signers_seeds)?;
         
         Ok(())
     }
@@ -93,7 +93,10 @@ impl<'info>Stake<'info>{
             to:self.user_mint_ata.to_account_info()
         };
         let ctx=CpiContext::new(self.token_program.to_account_info(), account);
-        approve(ctx, 1)
+        approve(ctx, 1)?;
+                self.user_config.points=self.user_config.points.saturating_add(self.stake_config.points_per_stake);
+        self.user_config.amounts_staked=self.user_config.amounts_staked.saturating_add(1);
+        Ok(())
     }
     pub fn initialize_stake_Account(&mut self,bumps:&StakeBumps)->Result<()>{
         self.stake_account.set_inner(StakeAccount { 

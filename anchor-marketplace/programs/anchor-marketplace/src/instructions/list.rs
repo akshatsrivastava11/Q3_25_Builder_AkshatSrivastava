@@ -9,7 +9,7 @@ pub struct List<'info>{
     #[account(mut)]
     pub maker:Signer<'info>,
     #[account(
-        seeds=[b"marketplace",name.as_bytes()],
+        seeds=[b"marketplace",marketplace.name.as_bytes()],
         bump        
     )]
     pub marketplace:Account<'info,Marketplace>,
@@ -36,23 +36,8 @@ pub struct List<'info>{
         associated_token::authority=listing,
     )]
     pub vault_ata:InterfaceAccount<'info,TokenAccount>,
-    pub collection:InterfaceAccount<'info,Mint>,
-    #[account(
-        seeds=[b"metadata",metadata_program.key().as_ref(),mint.key().as_ref()],
-        bump,
-        seeds::program=metadata_program.key(),
-        constraint=metadata.collection.as_ref().unwrap().key.as_ref()==collection.key().as_ref(),
-        constraint=metadata.collection.as_ref().unwrap().verified==true
-    )]
-    pub metadata:Account<'info,MetadataAccount>,
-    #[account(
-        seeds=[b"metadata",metadata_program.key().as_ref(),mint.key().as_ref(),b"edition"],
-        bump,
-        seeds::program=metadata_program.key(),
-    )]
-    pub master_edition:Account<'info,MasterEditionAccount>,
+
     pub system_program:Program<'info,System>,
-    pub metadata_program:Program<'info,Metadata>,
     pub token_program:Interface<'info,TokenInterface>,
     pub associated_token_program:Program<'info,AssociatedToken>
 }

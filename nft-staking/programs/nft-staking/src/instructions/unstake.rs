@@ -31,6 +31,7 @@ pub struct Unstake<'info>{
     )]
     pub stake_config:Account<'info,StakeConfig>,
     #[account(
+        mut,
         seeds=[b"stake",user_config.key().as_ref()],
         bump
     )]
@@ -46,10 +47,11 @@ pub struct Unstake<'info>{
 impl<'info>Unstake<'info>{
     pub fn unstake(&mut self,bumps:UnstakeBumps)->Result<()>{
         let time_elapsed=Clock::get()?.unix_timestamp-self.stake_account.staked_at;
-        require!(time_elapsed>self.stake_config.freeze_period as i64,StakeError::TimeElapsedError);
+        require!(time_elapsed>=self.stake_config.freeze_period as i64,StakeError::TimeElapsedError);
         require!(self.user_config.amounts_staked>0,StakeError::NoNFTStakedError);
         let program=self.metadata_program.to_account_info();
         let binding = self.user_config.key();
+        msg!("bumps for stake account is {}",bumps.stake_account);
         let seeds=&[
             b"stake",binding.as_ref(),
             &[bumps.stake_account]
@@ -62,13 +64,13 @@ impl<'info>Unstake<'info>{
             token_account:&self.user_mint_ata.to_account_info(),
             token_program:&self.token_program.to_account_info()
         };
-        ThawDelegatedAccountCpi::new(&self.metadata_program.to_account_info(), accounts).invoke_signed(signers_seeds);
+        ThawDelegatedAccountCpi::new(&self.metadata_program.to_account_info(), accounts).invoke_signed(signers_seeds)?;
         let account=Revoke{
             authority:self.user.to_account_info(),
-            source:self.mint.to_account_info()
+            source:self.user_mint_ata.to_account_info()
         };
         let ctx=CpiContext::new(self.token_program.to_account_info(),account);
-        revoke(ctx);
+        revoke(ctx)?;
         self.user_config.points+=time_elapsed as u64*self.stake_config.points_per_stake;
         self.user_config.amounts_staked-=1;
         Ok(())
