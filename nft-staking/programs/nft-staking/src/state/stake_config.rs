@@ -1,11 +1,11 @@
 use anchor_lang::prelude::*;
-
 #[account]
 #[derive(InitSpace)]
 pub struct StakeConfig{
-    pub points_per_stake:u8,
-    pub max_stake:u8,
-    pub freeze_period:u32,
-    pub config_bump:u8,
-    pub rewards_bump:u8
+    pub points_per_stake:u64,
+    pub max_amount_staked:u8,
+    pub fees:u8,
+    pub rewards_bump:u8,
+    pub stake_config_bump:u8,
+    pub freeze_period:u32
 }

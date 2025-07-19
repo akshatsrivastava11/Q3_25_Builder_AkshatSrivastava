@@ -9,7 +9,7 @@ pub struct Delist<'info>{
     #[account(mut)]
     pub maker:Signer<'info>,
     #[account(
-        seeds=[b"marketplace",name.as_bytes()],
+        seeds=[b"marketplace",marketplace.name.as_bytes()],
         bump        
     )]
     pub marketplace:Account<'info,Marketplace>,
@@ -60,13 +60,14 @@ impl <'info>Delist<'info> {
         };
     
         let program=self.token_program.to_account_info();
-        let ctx=CpiContext::new_with_signer(program, accounts, signer_seeds);
+        let ctx=CpiContext::new_with_signer(program, accounts, signer_seeeds);
         transfer_checked(ctx, 1, 0)
         // todo!()
     
     }
     pub fn close_vault(&mut self)->Result<()>{
         let program=self.token_program.to_account_info();
+        let key=self.marketplace.key();
         let seeds=&[
             b"listing",
             key.as_ref(),
@@ -78,7 +79,7 @@ impl <'info>Delist<'info> {
             authority:self.listing.to_account_info(),
             destination:self.maker.to_account_info()
         };
-        let ctx=CpiContext::new_with_signer(program, accounts, signer_seeds);
+        let ctx=CpiContext::new_with_signer(program, accounts, signer_seeeds);
         close_account(ctx)
         // todo!()
     }

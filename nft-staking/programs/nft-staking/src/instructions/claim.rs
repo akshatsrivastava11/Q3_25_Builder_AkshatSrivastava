@@ -1,26 +1,27 @@
-use anchor_lang::prelude::*;
-use anchor_spl::{associated_token::AssociatedToken, token::{mint_to, MintTo, TokenAccount}};
+use anchor_lang::{prelude::*};
+use anchor_spl::{associated_token::AssociatedToken, metadata::{mpl_token_metadata::instructions::{FreezeDelegatedAccount, FreezeDelegatedAccountCpi, FreezeDelegatedAccountCpiAccounts}, MasterEditionAccount, Metadata, MetadataAccount}, token::{approve, mint_to, Approve, FreezeAccount, Mint, MintTo, Token, TokenAccount}};
 
-use crate::{StakeConfig, UserConfig};
+use crate::{stake_config, StakeAccount, StakeConfig, UserConfig};
 
 #[derive(Accounts)]
 pub struct Claim<'info>{
     #[account(mut)]
     pub user:Signer<'info>,
     #[account(
-        seeds=[b"config".as_ref()],
-        bump=config.config_bump
-    )]
-    pub config:Account<'info,StakeConfig>,
-    #[account(
-        seeds=[b"user",user.key().as_ref()],
-        bump=user_config.bump
+        seeds=[b"user",stake_config.key().as_ref(),user.key().as_ref()],
+        bump=user_config.bump,
     )]
     pub user_config:Account<'info,UserConfig>,
     #[account(
-        mint::authority=config,
-        seeds=[b"reward".as_ref(),config.key().as_ref()],
-        bump
+        seeds=[b"config"],
+        bump=stake_config.stake_config_bump
+    )]
+    pub stake_config:Account<'info,StakeConfig>,
+    #[account(
+        seeds=[b"rewards",stake_config.key().as_ref()],
+        bump,
+        mint::authority=stake_config,
+        mint::decimals=6,
     )]
     pub rewards:Account<'info,Mint>,
     #[account(
@@ -29,30 +30,28 @@ pub struct Claim<'info>{
         associated_token::authority=user,
         associated_token::mint=rewards
     )]
-    pub reward_ata:Account<'info,TokenAccount>,
-    pub associated_token_program:Program<'info,AssociatedToken>,
+    pub rewards_ata_user:Account<'info,TokenAccount>,
     pub system_program:Program<'info,System>,
-    pub token_program:Program<'info,Token>
+    pub token_program:Program<'info,Token>,
+    pub associated_token_program:Program<'info,AssociatedToken>
 }
-
 impl<'info>Claim<'info>{
-    pub fn claim(&mut self)->Result<()>{
+    pub fn claim(&mut self,bumps:ClaimBumps)->Result<()>{
+        let claimtoken=self.user_config.points*10_u64.pow(self.rewards.decimals as u32);
         let program=self.token_program.to_account_info();
-            let seeds=&[
-        b"stake".as_ref(),
-        self.user.key().as_ref(),
-        self.config.key().as_ref()
-     ];
-     let signer_seeds=&[&seeds[..]];
-     let mintToAccounts=MintTo{
-        authority:self.config.to_account_info(),
-        mint:self.rewards.to_account_info(),
-        to:self.reward_ata.to_account_info()
-     };
-     let ctx=CpiContext::new(program,mintToAccounts);
-
-     mint_to(ctx, self.user_config.points as u64 *10_u64.pow(self.rewards.decimals as uu64));
-     self.user_config.points=0;
-     Ok(())
+        let seeds:&[&[u8]]=&[
+            b"config",
+            &[self.stake_config.stake_config_bump]
+        ];
+        let signer_seeds=&[&seeds[..]];
+        let acccounts=MintTo{
+            authority:self.stake_config.to_account_info(),
+            mint:self.rewards.to_account_info(),
+            to:self.rewards_ata_user.to_account_info()
+        };
+        let ctx=CpiContext::new_with_signer(program, acccounts, signer_seeds);
+        mint_to(ctx, claimtoken);
+        self.user_config.points=0;
+        Ok(())
     }
-} 
+}
