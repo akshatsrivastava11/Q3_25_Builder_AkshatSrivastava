@@ -10,3 +10,6 @@
 [submodule "mintCraft-frontend"]
 	path = mintCraft-frontend
 	url = https://github.com/akshatsrivastava11/mintCraft-frontend.git
+[submodule "mintCraft-model-registry"]
+	path = mintCraft-model-registry
+	url = https://github.com/akshatsrivastava11/mintCraft-model-registry.git
