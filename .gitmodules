@@ -16,3 +16,6 @@
 [submodule "mintCraft-marketplace"]
 	path = mintCraft-marketplace
 	url = https://github.com/akshatsrivastava11/mintCraft-marketplace.git
+[submodule "mintCraft-backend"]
+	path = mintCraft-backend
+	url = https://github.com/akshatsrivastava11/mintCraft-backend.git
