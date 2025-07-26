@@ -1,53 +1,70 @@
-use anchor_lang::{prelude::*, system_program::{transfer, Transfer}};
+use anchor_lang::{
+    prelude::*,
+    system_program::{transfer, Transfer},
+};
 
 use crate::Bet;
 
 #[derive(Accounts)]
-#[instruction(seed:u128)]
-pub struct PlaceBet<'info>{
+pub struct PlaceBet<'info> {
     #[account(mut)]
-    pub player:Signer<'info>,
-    //CHECK::this is safe
-    pub house:UncheckedAccount<'info>,
-    #[account(
-        init,
-        payer=player,
-        space=8+Bet::INIT_SPACE,
-        seeds=[b"bet",seed.to_be_bytes().as_ref(),vault.key().as_ref()],
-        bump
-    )]
-    pub bet:Account<'info,Bet>,
+    pub gambler: Signer<'info>,
     #[account(
         mut,
-        seeds=[b"vault",house.key().as_ref()],
+        seeds=[b"vault"],
         bump
     )]
-    pub vault:SystemAccount<'info>,
-    pub system_program:Program<'info,System>
+    pub vault: SystemAccount<'info>,
+    #[account(
+        init,
+        payer=gambler,
+        space=8+Bet::INIT_SPACE,
+        seeds=[b"bet",gambler.key().as_ref()],
+        bump
+    )]
+    pub bet: Account<'info, Bet>,
+    pub system_program: Program<'info, System>,
 }
-
-impl<'info>PlaceBet<'info>{
-    pub fn place_bet(&mut self)->Result<()>{
-        todo!()
+impl<'info> PlaceBet<'info> {
+    pub fn place_bet(
+        &mut self,
+        bet_amonut: u64,
+        roll: u64,
+        seed: u8,
+        slot: u64,
+        bumps: PlaceBetBumps,
+    ) -> Result<()> {
+        self.make_bet(bet_amonut, roll, seed, slot, bumps);
+        self.transfer_bet(bet_amonut);
+        Ok(())
     }
-    pub fn create_bet(&mut self,roll:u8,amount:u64,seed:u128,bump:PlaceBetBumps)->Result<()>{
+    pub fn make_bet(
+        &mut self,
+        bet_amonut: u64,
+        roll: u64,
+        seed: u8,
+        slot: u64,
+        bumps: PlaceBetBumps,
+    ) -> Result<()> {
         self.bet.set_inner(Bet {
-             player: self.player.key(),
-              slot: Clock::get()?.slot,
-               roll ,
-                amount,
-                 seed,
-                  bump:bump.bet
-                 });
-                Ok(())
+            bet_amonut,
+            roll,
+            gambler: self.gambler.key(),
+            seed,
+            bump: bumps.bet,
+            slot,
+        });
+
+        Ok(())
     }
-    pub fn deposit(&mut self,amount:u64)->Result<()>{
-        let accounts=Transfer{
-            from:self.player.to_account_info(),
-            to:self.vault.to_account_info()
+    pub fn transfer_bet(&mut self, bet_amonut: u64) -> Result<()> {
+        let accounts = Transfer {
+            from: self.gambler.to_account_info(),
+            to: self.vault.to_account_info(),
         };
-        let ctx=CpiContext::new(self.system_program.to_account_info(),accounts);
-        transfer(ctx, amount)?;
+        let program = self.system_program.to_account_info();
+        let ctx = CpiContext::new(program, accounts);
+        transfer(ctx, bet_amonut);
         Ok(())
     }
 }
