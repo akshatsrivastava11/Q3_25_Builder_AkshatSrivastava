@@ -6,22 +6,23 @@ pub struct Initialize<'info>{
     pub house:Signer<'info>,
     #[account(
         mut,
-        seeds=[b"vault",house.key().as_ref()],
+        seeds=[b"vault"],
         bump
     )]
     pub vault:SystemAccount<'info>,
     pub system_program:Program<'info,System>
 }
 
-impl<'info> Initialize<'info>{
+impl<'info>Initialize<'info>{
     pub fn initialize(&mut self,amount:u64)->Result<()>{
+        let program=self.system_program.to_account_info();
         let accounts=Transfer{
-            to:self.vault.to_account_info(),
-            from:self.house.to_account_info()
+            from:self.house.to_account_info(),
+            to:self.vault.to_account_info()
         };
-        let ctx=CpiContext::new(self.system_program.to_account_info(),accounts);
+        let ctx=CpiContext::new(program, accounts);
+        msg!("Transferring to the vault from the house {}",amount);
         transfer(ctx, amount)?;
         Ok(())
-
     }
 }
