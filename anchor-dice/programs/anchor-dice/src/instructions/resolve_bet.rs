@@ -1,4 +1,4 @@
-use anchor_lang::{prelude::*, solana_program::{blake3::hash, ed25519_program, example_mocks::solana_sdk::signature, sysvar::instructions::load_instruction_at_checked}, system_program::{transfer, Transfer}};
+use anchor_lang::{prelude::*, solana_program::{blake3::hash, ed25519_program, sysvar::instructions::load_instruction_at_checked}, system_program::{transfer, Transfer}};
 use anchor_instruction_sysvar::{Ed25519InstructionSignature, Ed25519InstructionSignatures};
 use crate::Bet;
 
@@ -6,8 +6,10 @@ use crate::Bet;
 pub  struct ResolveBet<'info>{
     #[account(mut)]
     pub house:Signer<'info>,
+
     #[account(mut)]
-    pub gambler:SystemAccount<'info>,
+    ///CHECK:This is safe
+    pub gambler:UncheckedAccount<'info>,
     #[account(
         seeds=[b"bet",gambler.key().as_ref()],
         bump        
@@ -20,12 +22,13 @@ pub  struct ResolveBet<'info>{
     )]
     pub vault:SystemAccount<'info>,
     pub system_program:Program<'info,System>,
+    ///CHECK:This is safe
     pub instruction_sysvar:AccountInfo<'info>
 }
 
 impl<'info>ResolveBet<'info>{
     //checks for the instruction sysvar
-    pub fn verift_edd25519_signature(&mut self)->Result<()>{
+    pub fn verift_edd25519_signature(&mut self,sig:&[u8])->Result<()>{
         let ix=load_instruction_at_checked(0, &self.instruction_sysvar.to_account_info())?;
         //checks if the instruction_sysvar is key
         require_keys_eq!(ix.program_id,ed25519_program::ID,DiceError::ED25519KEYERROR);
@@ -38,6 +41,7 @@ impl<'info>ResolveBet<'info>{
         let signature=&signatures[0];
         require!(signature.is_verifiable,DiceError::ED25519SIGNATUREUNVERIFIED);
         require_keys_eq!(signature.public_key.ok_or(DiceError::Ed25519Pubkey)?,self.house.key(),DiceError::ED25519SIGNATUREMISMATCH);  
+        require!(&signature.signature.ok_or(DiceError::Ed25519SIGNATURE)?.eq(sig), DiceError::Ed25519SIGNATURE);
         require!(&signature.message.as_ref().ok_or(DiceError::Ed25519SIGNATURE)?.eq(&self.bet.to_slice()),DiceError::Ed25519SIGNATURE);
         Ok(())
     }
@@ -45,9 +49,9 @@ impl<'info>ResolveBet<'info>{
     pub fn resolve_bet(&mut self,sig:&[u8],bumps:ResolveBetBumps)->Result<()>{
         let hash=hash(sig).to_bytes();
         let mut firstHalf=[0;16];
-        firstHalf.copy_from_slice(&sig[0..16]);
+        firstHalf.copy_from_slice(&hash[0..16]);
         let mut second_half=[0;16];
-        second_half.copy_from_slice(&sig[16..32]);
+        second_half.copy_from_slice(&hash[16..32]);
         let upper=u128::from_le_bytes(firstHalf);
         let lower=u128::from_le_bytes(second_half);
         let roll=upper.wrapping_add(lower).wrapping_rem(100) as u8 +1;
@@ -88,5 +92,6 @@ pub enum DiceError{
     #[msg("Signature message not as expected")]
     Ed25519SIGNATURE,
     #[msg("calculation overflowed")]
-    OVERFLOW
+    OVERFLOW,
+    
 }
