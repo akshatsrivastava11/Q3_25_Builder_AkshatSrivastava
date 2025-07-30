@@ -31,10 +31,9 @@ impl<'info> PlaceBet<'info> {
         bet_amonut: u64,
         roll: u64,
         seed: u8,
-        slot: u64,
         bumps: PlaceBetBumps,
     ) -> Result<()> {
-        self.make_bet(bet_amonut, roll, seed, slot, bumps);
+        self.make_bet(bet_amonut, roll, seed, bumps);
         self.transfer_bet(bet_amonut);
         Ok(())
     }
@@ -43,7 +42,6 @@ impl<'info> PlaceBet<'info> {
         bet_amonut: u64,
         roll: u64,
         seed: u8,
-        slot: u64,
         bumps: PlaceBetBumps,
     ) -> Result<()> {
         self.bet.set_inner(Bet {
@@ -52,7 +50,7 @@ impl<'info> PlaceBet<'info> {
             gambler: self.gambler.key(),
             seed,
             bump: bumps.bet,
-            slot,
+            slot:Clock::get()?.slot,
         });
 
         Ok(())
